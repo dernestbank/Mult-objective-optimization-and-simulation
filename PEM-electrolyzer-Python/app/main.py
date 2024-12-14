@@ -4,7 +4,7 @@ import plotly.express as px
 from utils.optimization import run_optimization
 
 st.set_page_config(page_title="PEM Electrolyser Multi-Catalyst Optimization", layout="wide")
-st.title("Multiobjective Optimization with Separate Anode and Cathode Catalysts")
+st.title("Multiobjective Optimization")
 
 st.sidebar.header("Operating Parameters")
 A_cell = st.sidebar.number_input("Cell Active Area (cm²)", value=50.0)

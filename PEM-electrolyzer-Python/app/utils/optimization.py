@@ -1,7 +1,7 @@
 import numpy as np
 from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.algorithms.moo.nsga3 import NSGA3
-from pymoo.factory import get_termination
+from pymoo.termination import get_termination
 from pymoo.core.problem import ElementwiseProblem
 from pymoo.optimize import minimize
 from utils.models import cost_function, eta_total_layer
