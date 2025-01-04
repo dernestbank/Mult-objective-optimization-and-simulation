@@ -1,9 +1,11 @@
+# utils/visualization.py
+
 import pandas as pd
 import plotly.express as px
 
 def create_dataframe(X, F, var_names=None, obj_names=None):
     """
-    Create a dataframe with decision variables and objectives.
+    Create a combined DataFrame of decision variables (X) and objectives (F).
     var_names: list of decision variable names
     obj_names: list of objective names
     """
@@ -22,8 +24,8 @@ def create_dataframe(X, F, var_names=None, obj_names=None):
 
 def scatter_matrix_plot(df, dimensions=None, color=None):
     """
-    Create a scatter matrix plot using Plotly.
-    dimensions: list of columns to include in the scatter matrix
+    Plotly scatter matrix.
+    dimensions: columns to include
     color: column name for coloring points
     """
     if dimensions is None:
@@ -33,9 +35,7 @@ def scatter_matrix_plot(df, dimensions=None, color=None):
 
 def parallel_coordinates_plot(df, dimensions=None, color=None):
     """
-    Create a parallel coordinates plot.
-    dimensions: list of columns to include
-    color: column name for coloring lines
+    Plotly parallel coordinates plot.
     """
     if dimensions is None:
         dimensions = df.columns
@@ -44,10 +44,7 @@ def parallel_coordinates_plot(df, dimensions=None, color=None):
 
 def heatmap_plot(df, x_var, y_var, z_var):
     """
-    Create a heatmap from a dataframe.
-    x_var: column for x axis
-    y_var: column for y axis
-    z_var: column for heatmap values (aggregated)
+    Heatmap using pivot_table to aggregate z_var over x_var,y_var
     """
     pivot_df = df.pivot_table(index=y_var, columns=x_var, values=z_var, aggfunc='mean')
     fig = px.imshow(pivot_df, aspect='auto', color_continuous_scale='Viridis', 
@@ -56,10 +53,7 @@ def heatmap_plot(df, x_var, y_var, z_var):
 
 def glyph_plot(df, x, y, size_col=None, color_col=None):
     """
-    A glyph plot can be approximated by using a scatter plot with symbol/size encoding.
-    x, y: columns for axes
-    size_col: column for sizing glyphs
-    color_col: column for coloring glyphs
+    Scatter plot as a 'glyph' plot with size and color encodings.
     """
     fig = px.scatter(df, x=x, y=y, size=size_col, color=color_col, 
                      title="Glyph Plot", hover_data=df.columns)
