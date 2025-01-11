@@ -3,3 +3,7 @@ env
 localfiles
 .venv
 __pycache__
+.vscode
+no_git
+
+
