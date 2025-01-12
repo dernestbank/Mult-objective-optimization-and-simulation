@@ -16,49 +16,49 @@ from pymoo.optimize import minimize
 
 from utils.models import cost_function, eta_total
 
-# Suppose you have cost_function, eta_total in another file:
-# from utils.models import cost_function, eta_total
-# We'll assume they're correctly implemented.
-
 ###############################################################################
-# PEMProblem (Base, 24 constraints)
+# PEMProblem with 21 Constraints
 ###############################################################################
 
 class PEMProblem(ElementwiseProblem):
     """
-    Base multiobjective problem for an anode + cathode PEM electrolyzer design.
-    Decision Variables (6):
-      x = [δ_a, ε_a, S_cat_a, δ_c, ε_c, S_cat_c]
+    PEM Problem with 21 constraints for an anode + cathode design + global constraints:
+    - Decision Variables (6):
+        x = [delta_a, eps_a, S_cat_a, delta_c, eps_c, S_cat_c]
 
-    Objectives (2):
-      F0 = total cost
-      F1 = total overpotential
+    - 2 Objectives:
+        1) cost_total
+        2) overpotential_total
 
-    Constraints (24 total):
-      1) Porosity    => 4
-      2) Thickness   => 4
-      3) S_cat       => 4
-      4) CatalystLoad=> 4
-      5) Tortuosity  => 4
-      6) SurfaceArea => 2
-      7) CurrentDen  => 2
-      8) Overpot     => 1
-      -------------
-      total = 25? Actually 4+4+4+4+4+2+2+1=25. But typically we only do one
-      combined. Check carefully. We count: 4 + 4 + 4 + 4 + 4 + 2 + 2 + 1 = 25.
-      Possibly the last "overpotential" is 1 => 25. If your base problem
-      truly has 24 constraints, confirm your math.
+    - 21 Constraints total:
+      Anode (9):
+        1)  0.001 ≤ eps_a ≤ 0.999 => 2 constraints
+        2)  delta_a_min ≤ delta_a ≤ delta_a_max => 2
+        3)  Scat_a_min ≤ S_cat_a ≤ Scat_a_max => 2
+        4)  S_cat_a*(1-eps_a)*delta_a >= SA_a_min => 1
+        5)  L_a_min ≤ rho_cat_a * delta_a * (1-eps_a) ≤ L_a_max => 2
 
-      If you only see 24 in your own list, that is fine. 
-      The key is that e-Constraint method can add +1 to the base problem's constraints.
+      Cathode (9):
+        same structure => total 9
+
+      Global (3):
+        j_min ≤ j ≤ j_max => 2
+        eta_total ≤ eta_max => 1
     """
+
     def __init__(self,
+                 # Operating, geometry, etc.
                  A_cell, j, R, T, alpha, n, F,
-                 C_bulk_a, D_a, tau_a,
-                 C_bulk_c, D_c, tau_c,
+                 # Anode
+                 C_bulk_a, D_a, #tau_a,
+                 # Cathode
+                 C_bulk_c, D_c, #tau_c,
                  eta_max,
+                 # Catalyst Anode
                  rho_cat_a, c_cat_a, j0_a, a_a, b_a,
+                 # Catalyst Cathode
                  rho_cat_c, c_cat_c, j0_c, a_c, b_c,
+                 # Constraints
                  eps_a_min, eps_a_max,
                  eps_c_min, eps_c_max,
                  delta_a_min, delta_a_max,
@@ -67,16 +67,14 @@ class PEMProblem(ElementwiseProblem):
                  Scat_c_min, Scat_c_max,
                  L_a_min, L_a_max,
                  L_c_min, L_c_max,
-                 tau_a_min, tau_a_max,
-                 tau_c_min, tau_c_max,
                  SA_a_min, SA_c_min,
                  j_min, j_max,
-                 # We'll set n_constr=24 to match your base problem assumption
-                 n_var=6, n_obj=2, n_constr=24):
-
-        # Decision space: 6D => [δ_a, eps_a, S_cat_a, δ_c, eps_c, S_cat_c]
-        # Lower bound => [delta_a_min, eps_a_min, Scat_a_min, delta_c_min, eps_c_min, Scat_c_min]
-        # Upper bound => [delta_a_max, eps_a_max, Scat_a_max, delta_c_max, eps_c_max, Scat_c_max]
+                 # we do not forcibly link tau to eps here
+                 # we let user specify or choose some correlation if wanted
+                 tau_a, tau_c,
+                 # We have 21 constraints
+                 n_var=6, n_obj=2, n_constr=21):
+        # x = [δ_a, eps_a, S_cat_a, δ_c, eps_c, S_cat_c]
         super().__init__(
             n_var=n_var,
             n_obj=n_obj,
@@ -86,8 +84,6 @@ class PEMProblem(ElementwiseProblem):
             xu=[delta_a_max, eps_a_max, Scat_a_max,
                 delta_c_max, eps_c_max, Scat_c_max]
         )
-
-        # Store attributes
         self.A_cell = A_cell
         self.j = j
         self.R = R
@@ -108,123 +104,153 @@ class PEMProblem(ElementwiseProblem):
 
         self.eta_max = eta_max
 
-        # Catalyst props anode
+        # Catalyst anode
         self.rho_cat_a = rho_cat_a
         self.c_cat_a   = c_cat_a
         self.j0_a      = j0_a
         self.a_a       = a_a
         self.b_a       = b_a
 
-        # Catalyst props cathode
+        # Catalyst cathode
         self.rho_cat_c = rho_cat_c
         self.c_cat_c   = c_cat_c
         self.j0_c      = j0_c
         self.a_c       = a_c
         self.b_c       = b_c
 
-        # Constraints
-        self.eps_a_min = eps_a_min
-        self.eps_a_max = eps_a_max
-        self.eps_c_min = eps_c_min
-        self.eps_c_max = eps_c_max
-
-        self.delta_a_min = delta_a_min
-        self.delta_a_max = delta_a_max
-        self.delta_c_min = delta_c_min
-        self.delta_c_max = delta_c_max
-
-        self.Scat_a_min = Scat_a_min
-        self.Scat_a_max = Scat_a_max
-        self.Scat_c_min = Scat_c_min
-        self.Scat_c_max = Scat_c_max
-
-        self.L_a_min = L_a_min
-        self.L_a_max = L_a_max
-        self.L_c_min = L_c_min
-        self.L_c_max = L_c_max
-
-        self.tau_a_min = tau_a_min
-        self.tau_a_max = tau_a_max
-        self.tau_c_min = tau_c_min
-        self.tau_c_max = tau_c_max
-
+        # Bounds for constraints
+        self.eps_a_min, self.eps_a_max = eps_a_min, eps_a_max
+        self.eps_c_min, self.eps_c_max = eps_c_min, eps_c_max
+        self.delta_a_min, self.delta_a_max = delta_a_min, delta_a_max
+        self.delta_c_min, self.delta_c_max = delta_c_min, delta_c_max
+        self.Scat_a_min, self.Scat_a_max   = Scat_a_min, Scat_a_max
+        self.Scat_c_min, self.Scat_c_max   = Scat_c_min, Scat_c_max
+        self.L_a_min, self.L_a_max         = L_a_min, L_a_max
+        self.L_c_min, self.L_c_max         = L_c_min, L_c_max
         self.SA_a_min = SA_a_min
         self.SA_c_min = SA_c_min
-
-        self.j_min = j_min
-        self.j_max = j_max
+        self.j_min, self.j_max = j_min, j_max
 
     def _evaluate(self, x, out, *args, **kwargs):
-        δ_a, ε_a, S_a, δ_c, ε_c, S_c = x
+        # x= [delta_a, eps_a, Scat_a, delta_c, eps_c, Scat_c]
+        delta_a, eps_a, Scat_a, delta_c, eps_c, Scat_c = x
 
-        # Cost
-        L_a = self.rho_cat_a*δ_a*(1-ε_a)
-        L_c = self.rho_cat_c*δ_c*(1-ε_c)
-        cost_a = L_a * self.A_cell * self.c_cat_a
-        cost_c = L_c * self.A_cell * self.c_cat_c
+        # 1) cost: sum anode + cathode
+        # cost_function(rho_cat, delta, eps, A_cell, c_cat)
+        cost_a = cost_function(self.rho_cat_a, delta_a, eps_a, self.A_cell, self.c_cat_a)
+        cost_c = cost_function(self.rho_cat_c, delta_c, eps_c, self.A_cell, self.c_cat_c)
         cost_total = cost_a + cost_c
 
-        # Overpotential
-        # Suppose you have a function: eta_total(...) => returns activation+concentration
-        # We'll assume correct.
+        # 2) Overpotential sum
+        # anode
         eta_a = eta_total(
-            j=self.j, j0=self.j0_a, S_cat=S_a, epsilon=ε_a, delta=δ_a,
-            a=self.a_a, b=self.b_a, R=self.R, T=self.T, n=self.n, F=self.F,
-            C_bulk=self.C_bulk_a, D=self.D_a, tau=self.tau_a
+            j=self.j, j0=self.j0_a, S_cat=Scat_a, epsilon=eps_a, delta=delta_a,
+            a=self.a_a, b=self.b_a, R=self.R, T=self.T,
+            n=self.n, F=self.F, C_bulk=self.C_bulk_a, D=self.D_a, tau=self.tau_a
         )
+        # cathode
         eta_c = eta_total(
-            j=self.j, j0=self.j0_c, S_cat=S_c, epsilon=ε_c, delta=δ_c,
-            a=self.a_c, b=self.b_c, R=self.R, T=self.T, n=self.n, F=self.F,
-            C_bulk=self.C_bulk_c, D=self.D_c, tau=self.tau_c
+            j=self.j, j0=self.j0_c, S_cat=Scat_c, epsilon=eps_c, delta=delta_c,
+            a=self.a_c, b=self.b_c, R=self.R, T=self.T,
+            n=self.n, F=self.F, C_bulk=self.C_bulk_c, D=self.D_c, tau=self.tau_c
         )
-        eta_cell = eta_a + eta_c
+        eta_sum = eta_a + eta_c
 
-        out["F"] = [cost_total, eta_cell]
+        # 2 objectives
+        out["F"] = [cost_total, eta_sum]
 
-        # Build the 24 constraints => G <= 0 => feasible
-        # omitted for brevity, but should yield exactly 24 constraints
-        g_list = []
+        # Now build 21 constraints => G <= 0 means feasible
+        G = []
 
-        # 1) Porosity: 4
-        g_list += [-ε_a, ε_a - 1, -ε_c, ε_c - 1]
-        # 2) Thickness: 4
-        g_list += [self.delta_a_min - δ_a, δ_a - self.delta_a_max,
-                   self.delta_c_min - δ_c, δ_c - self.delta_c_max]
-        # 3) S_cat: 4
-        g_list += [self.Scat_a_min - S_a, S_a - self.Scat_a_max,
-                   self.Scat_c_min - S_c, S_c - self.Scat_c_max]
-        # 4) Catalyst Loading: 4
-        g_list += [self.L_a_min - L_a, L_a - self.L_a_max,
-                   self.L_c_min - L_c, L_c - self.L_c_max]
-        # 5) Tortuosity: 4
-        g_list += [self.tau_a_min - self.tau_a, self.tau_a - self.tau_a_max,
-                   self.tau_c_min - self.tau_c, self.tau_c - self.tau_c_max]
-        # 6) Effective Surface: 2
-        eff_a = S_a * (1-ε_a)*δ_a
-        eff_c = S_c * (1-ε_c)*δ_c
-        g_list += [self.SA_a_min - eff_a, self.SA_c_min - eff_c]
-        # 7) Current Den: 2
-        g_list += [self.j_min - self.j, self.j - self.j_max]
-        # 8) Overpotential: 1
-        g_list += [eta_cell - self.eta_max]
+        # Anode (9 constraints):
+        # 1) 0.001 ≤ eps_a ≤ 0.999 => 2
+        g_eps_a_min = self.eps_a_min - eps_a      # eps_a >= eps_a_min => eps_a_min - eps_a <=0
+        g_eps_a_max = eps_a - self.eps_a_max      # eps_a <= eps_a_max => eps_a - eps_a_max <=0
 
-        out["G"] = g_list
+        # 2) delta_a_min ≤ delta_a ≤ delta_a_max => 2
+        g_da_min = self.delta_a_min - delta_a
+        g_da_max = delta_a - self.delta_a_max
+
+        # 3) Scat_a_min ≤ S_cat_a ≤ Scat_a_max => 2
+        g_scat_a_min = self.Scat_a_min - Scat_a
+        g_scat_a_max = Scat_a - self.Scat_a_max
+
+        # 4) Effective Surface area => S_cat_a*(1-eps_a)*delta_a >= SA_a_min => SA_a_min - ...
+        eff_a = Scat_a*(1-eps_a)*delta_a
+        g_eff_a = self.SA_a_min - eff_a
+
+        # 5) Catalyst Loading => L_a_min ≤ rho_cat_a*delta_a*(1-eps_a) ≤ L_a_max => 2
+        L_a = self.rho_cat_a*delta_a*(1-eps_a)
+        g_La_min = self.L_a_min - L_a
+        g_La_max = L_a - self.L_a_max
+
+        # total => 2+2+2+1+2 = 9 (anode)
+
+        # Cathode (9 constraints, same pattern)
+        g_eps_c_min = self.eps_c_min - eps_c
+        g_eps_c_max = eps_c - self.eps_c_max
+
+        g_dc_min = self.delta_c_min - delta_c
+        g_dc_max = delta_c - self.delta_c_max
+
+        g_scat_c_min = self.Scat_c_min - Scat_c
+        g_scat_c_max = Scat_c - self.Scat_c_max
+
+        eff_c = Scat_c*(1-eps_c)*delta_c
+        g_eff_c = self.SA_c_min - eff_c
+
+        L_c = self.rho_cat_c*delta_c*(1-eps_c)
+        g_Lc_min = self.L_c_min - L_c
+        g_Lc_max = L_c - self.L_c_max
+
+        # total => 9 for cathode
+
+        # Global (3 constraints):
+        # 1) j_min ≤ j ≤ j_max => 2 => j_min-j <=0, j-j_max<=0
+        g_j_min = self.j_min - self.j
+        g_j_max = self.j - self.j_max
+
+        # 2) eta_total <= eta_max => 1
+        g_eta = eta_sum - self.eta_max
+
+        # Add them all in correct order => total 21
+        # Anode(9):
+        G += [g_eps_a_min, g_eps_a_max,
+              g_da_min, g_da_max,
+              g_scat_a_min, g_scat_a_max,
+              g_eff_a,
+              g_La_min, g_La_max]
+        # Cathode(9):
+        G += [g_eps_c_min, g_eps_c_max,
+              g_dc_min, g_dc_max,
+              g_scat_c_min, g_scat_c_max,
+              g_eff_c,
+              g_Lc_min, g_Lc_max]
+        # Global(3):
+        G += [g_j_min, g_j_max, g_eta]
+
+        out["G"] = G
+
 
 ###############################################################################
-# Scalarization Subclasses
+# Scalarization: WeightedSum, GoalSeeking
 ###############################################################################
 
-def weighted_sum_optimization(problem, w1=0.5, w2=0.5):
+def weighted_sum_optimization(base_problem, w1=0.5, w2=0.5):
+    """
+    Weighted Sum approach => single-objective
+    Minimizes f = w1*cost + w2*overpotential
+    """
     class WeightedSumProblem(ElementwiseProblem):
-        def __init__(self, base_prob, w1, w2):
+        def __init__(self, problem, w1, w2):
             super().__init__(
-                n_var=base_prob.n_var,
+                n_var=problem.n_var,
                 n_obj=1,
-                n_constr=base_prob.n_constr,  # same # constraints as base
-                xl=base_prob.xl,
-                xu=base_prob.xu
+                n_constr=problem.n_constr,  # same 21 constraints
+                xl=problem.xl,
+                xu=problem.xu
             )
-            self.base = base_prob
+            self.base = problem
             self.w1 = w1
             self.w2 = w2
 
@@ -237,92 +263,60 @@ def weighted_sum_optimization(problem, w1=0.5, w2=0.5):
             out["F"] = [f]
             out["G"] = out_mo["G"]
 
-    single_obj_problem = WeightedSumProblem(problem, w1, w2)
-    algo = GA(pop_size=40)
+    single_obj_problem = WeightedSumProblem(base_problem, w1, w2)
+    algo = GA(pop_size=30)
     term = get_termination("n_gen", 30)
     return minimize(single_obj_problem, algo, term, seed=1, verbose=False)
 
 
-def e_constraint_optimization(problem, eps_value=1.0):
-    class EConstraintProblem(ElementwiseProblem):
-        def __init__(self, base_prob, eps):
-            super().__init__(
-                n_var=base_prob.n_var,
-                n_obj=1,
-                # +1 constraint
-                n_constr=base_prob.n_constr + 1,
-                xl=base_prob.xl,
-                xu=base_prob.xu
-            )
-            self.base = base_prob
-            self.eps = eps
-
-        def _evaluate(self, x, out, *args, **kwargs):
-            out_mo = {}
-            self.base._evaluate(x, out_mo, *args, **kwargs)
-            cost = out_mo["F"][0]
-            eta  = out_mo["F"][1]
-
-            # Append new constraint: eta <= eps => eta - eps <= 0
-            G_base = out_mo["G"]
-            g_list = list(G_base)  # 24 constraints
-            g_list.append(eta - self.eps)  # +1 => 25
-
-            out["F"] = [cost]
-            out["G"] = g_list
-
-    single_obj_problem = EConstraintProblem(problem, eps_value)
-    algo = GA(pop_size=40)
-    term = get_termination("n_gen", 30)
-    return minimize(single_obj_problem, algo, term, seed=1, verbose=False)
-
-
-def goal_seeking_optimization(problem, goals=(10.0, 0.5)):
+def goal_seeking_optimization(base_problem, goals=(10.0, 0.5)):
+    """
+    Minimizes f = (cost - goals[0])^2 + (eta - goals[1])^2
+    """
     class GoalProblem(ElementwiseProblem):
-        def __init__(self, base_prob, goals):
+        def __init__(self, problem, goals):
             super().__init__(
-                n_var=base_prob.n_var,
+                n_var=problem.n_var,
                 n_obj=1,
-                n_constr=base_prob.n_constr,
-                xl=base_prob.xl,
-                xu=base_prob.xu
+                n_constr=problem.n_constr,
+                xl=problem.xl,
+                xu=problem.xu
             )
-            self.base = base_prob
-            self.cost_goal, self.eta_goal = goals
+            self.base = problem
+            self.c_goal, self.eta_goal = goals
 
         def _evaluate(self, x, out, *args, **kwargs):
             out_mo = {}
             self.base._evaluate(x, out_mo, *args, **kwargs)
             cost = out_mo["F"][0]
             eta  = out_mo["F"][1]
-
-            # single objective => sum of squared deviations
-            f = (cost - self.cost_goal)**2 + (eta - self.eta_goal)**2
+            f = (cost - self.c_goal)**2 + (eta - self.eta_goal)**2
             out["F"] = [f]
             out["G"] = out_mo["G"]
 
-    single_obj_problem = GoalProblem(problem, goals)
-    algo = GA(pop_size=40)
+    single_obj_problem = GoalProblem(base_problem, goals)
+    algo = GA(pop_size=30)
     term = get_termination("n_gen", 30)
     return minimize(single_obj_problem, algo, term, seed=1, verbose=False)
 
 
 ###############################################################################
-# Pareto-based
+# Pareto-based: NSGA2, MOEA/D, SPEA2
 ###############################################################################
 
-def multiobjective_optimization(problem, method_name, pop_size=40, n_gen=50):
-    if method_name == "NSGA2":
+def multiobjective_optimization(base_problem, method, pop_size=40, n_gen=30):
+    if method == "NSGA2":
         alg = NSGA2(pop_size=pop_size)
-    elif method_name == "MOEA/D":
+    elif method == "MOEA/D":
         alg = MOEAD(pop_size=pop_size, n_neighbors=15, decomposition="pbi")
-    elif method_name == "SPEA2":
+    elif method == "SPEA2":
         alg = SPEA2(pop_size=pop_size)
     else:
+        # fallback
         alg = NSGA2(pop_size=pop_size)
 
-    termination = get_termination("n_gen", n_gen)
-    return minimize(problem, alg, termination, seed=1, verbose=False)
+    term = get_termination("n_gen", n_gen)
+    return minimize(base_problem, alg, term, seed=1, verbose=False)
 
 
 ###############################################################################
@@ -331,15 +325,12 @@ def multiobjective_optimization(problem, method_name, pop_size=40, n_gen=50):
 
 def run_optimization(category, method, **kwargs):
     """
-    Creates a new PEMProblem with 24 constraints each run,
-    Then calls either scalarization or Pareto-based approach.
+    Creates a fresh PEMProblem (21 constraints) each run,
+    then calls either scalarization or multiobjective approach.
 
-    - If scalarization => WeightedSum, eConstraint, or GoalSeeking
-      => no pop_size, n_gen is used
-    - If Pareto-based => NSGA2, MOEA/D, SPEA2
-      => pop_size, n_gen is used
+    We exclude e-Constraint method here (as requested).
 
-    'scalar_params' can be passed in kwargs but is popped out here.
+    scalar_params => Weighted Sum, Goal Seeking
     """
     scalar_params = kwargs.pop("scalar_params", {})
 
@@ -350,22 +341,19 @@ def run_optimization(category, method, **kwargs):
         pop_size = None
         n_gen    = None
 
-    # Build fresh base problem => n_constr=24
-    base_problem = PEMProblem(**kwargs)
+    # Build a new problem => 21 constraints
+    problem = PEMProblem(**kwargs)
 
     if category == "Scalarization":
         if method == "Weighted Sum":
             w1 = scalar_params.get("w1", 0.5)
             w2 = scalar_params.get("w2", 0.5)
-            return weighted_sum_optimization(base_problem, w1, w2)
-        elif method == "ε-Constraint":
-            eps_v = scalar_params.get("eps_value", 1.0)
-            return e_constraint_optimization(base_problem, eps_v)
+            return weighted_sum_optimization(problem, w1, w2)
         elif method == "Goal Seeking":
             goals = scalar_params.get("goals", (10.0, 0.5))
-            return goal_seeking_optimization(base_problem, goals)
+            return goal_seeking_optimization(problem, goals)
         else:
-            raise ValueError(f"Unknown scalarization method: {method}")
+            raise ValueError(f"Unrecognized scalarization method: {method}")
     else:
-        # Pareto-based => pop_size, n_gen
-        return multiobjective_optimization(base_problem, method, pop_size, n_gen)
+        # Pareto-based
+        return multiobjective_optimization(problem, method, pop_size, n_gen)
