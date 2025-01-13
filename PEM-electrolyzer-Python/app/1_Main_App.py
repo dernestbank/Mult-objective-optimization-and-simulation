@@ -12,7 +12,13 @@ from utils.optimization import run_optimization
 
 st.set_page_config(page_title="PEM Electrolyzer Optimization", layout="wide")
 
-st.title("PEM Electrolyzer: 21-Constraint Model")
+st.title("PEM Electrolyzer Design playground: Catalyst layer Design Optimization")
+st.write("Optimization of Electrolyzer Design for PEM Electrolyzer using 21-Constraint Model")
+
+# Add a button to clear the cache
+if st.sidebar.button("Clear Cache"):
+    st.cache_data.clear()
+    st.success("Cache cleared!")
 
 RESULTS_DIR = "results_logs"
 os.makedirs(RESULTS_DIR, exist_ok=True)
@@ -51,7 +57,7 @@ def compute_euclidean_distance(F, reference=(0,0)):
 ###############################################################################
 # Method Category
 ###############################################################################
-st.sidebar.header("Select Method Category")
+st.sidebar.header("Select Optimization Method ")
 method_category = st.sidebar.selectbox("Optimization Category",
                                        ["Scalarization","Pareto-based"])
 
@@ -76,50 +82,122 @@ if method_category=="Scalarization":
         c_goal=st.sidebar.number_input("Cost Goal",value=10.0)
         eta_goal=st.sidebar.number_input("Overpotential Goal",value=0.5)
         scalar_params["goals"] = (c_goal, eta_goal)
-
+st.sidebar.write("--- ")
 ###############################################################################
-# Operating & Catalyst
+# Operating & Catalyst parameters
 ###############################################################################
-st.sidebar.header("Operating & Catalyst & Constraints")
+st.sidebar.header("Design & Operating Parameters ") #& Catalyst & Constraints
 
 A_cell = st.sidebar.number_input("Cell Active Area (cm²)", value=50.0)
-j      = st.sidebar.number_input("Current Density j (A/cm²)", value=0.05)
-R      = 8.314
-T      = st.sidebar.number_input("Temperature (K)", value=353.0)
-alpha  = st.sidebar.number_input("Charge Transfer Coeff alpha",value=0.5)
-n_e    = st.sidebar.number_input("Number of Electrons (n)", value=2)
-F_const= 96485.0
+j      = st.sidebar.number_input("Current Density j (A/cm²)", value=2.0)
+R      = 8.314 # J/(mol*K)
+T      = st.sidebar.number_input("Temperature (K) ", value=353.0)
+st.sidebar.write(f"Temp = {T-273.15:.2f} °C")
+# n_e    = st.sidebar.number_input("Number of Electrons (n)", value=2)
+n_e=int(2)
+F_const= 96485.0 # Faraday Constant
 
-C_bulk_a=st.sidebar.number_input("Anode Bulk Conc (mol/cm³)", value=0.01)
-D_a=     st.sidebar.number_input("Anode Diffusivity (cm²/s)",value=1e-2)
-tau_a=   st.sidebar.number_input("Anode Tortuosity",value=1.2)
 
-C_bulk_c=st.sidebar.number_input("Cathode Bulk Conc (mol/cm³)", value=0.01)
-D_c=     st.sidebar.number_input("Cathode Diffusivity (cm²/s)",value=1e-2)
-tau_c=   st.sidebar.number_input("Cathode Tortuosity", value=1.2)
+# C_bulk_a=st.sidebar.number_input("Anode Bulk Conc (mol/cm³)",format="%.4f", value=0.056) #Concentration ≈ rho/molar mass = (1 g/cm³) / (18 g/mol) ≈ **0.056 mol/cm³** (or 56 mol/L)
+# D_a=     st.sidebar.number_input("Anode Diffusivity (cm²/s)",format="%.4f" ,value=0.26) #Bulk Diffusivity of Water Vapor (D): 0.26 cm²/s at 80°C and 1 atm. ld value 1e-2
+# tau_a=   st.sidebar.number_input("Anode Tortuosity",value=1.2) #  1.27 to 2.13
 
-eta_max= st.sidebar.number_input("Max Overpotential (V)", value=2.0)
+# C_bulk_c=st.sidebar.number_input("Cathode Bulk Conc (mol/cm³)",format="%.4f", value=0.001) #**0.001-0.002 mol/cm³** # formally 0.01
+# D_c=     st.sidebar.number_input("Cathode Diffusivity (cm²/s)",format="%.6f", value=2e-5) #For water at room temperature, it's around 2×10−5cm2​/s #old =1e-2
 
+# tau_c=   st.sidebar.number_input("Cathode Tortuosity", value=1.27) #  1.27 to 2.13
+
+# ------make catalyst customizable 
 # Catalyst anode
-rho_cat_a= st.sidebar.number_input("Anode Catalyst Density (g/cm³)", value=11.66)
-c_cat_a  = st.sidebar.number_input("Anode Catalyst Cost ($/g)", value=100.0)
-j0_a     = st.sidebar.number_input("Anode j0 (A/cm²_active)",value=1e-3)
-a_a      = st.sidebar.number_input("Anode Tafel a (V)",value=0.1)
-b_a      = st.sidebar.number_input("Anode Tafel b (V)",value=0.05)
+# rho_cat_a= st.sidebar.number_input("Anode Catalyst Density (g/cm³)", value=11.66)
+# c_cat_a  = st.sidebar.number_input("Anode Catalyst Cost ($/g)", value=100.0)
+# j0_a     = st.sidebar.number_input("Anode j0 (A/cm²_active)",value=1e-3)
+# a_a      = st.sidebar.number_input("Anode Tafel a (V)",value=0.1)
+# b_a      = st.sidebar.number_input("Anode Tafel b (V)",value=0.05)
 
-# Catalyst cathode
-rho_cat_c= st.sidebar.number_input("Cathode Catalyst Density (g/cm³)", value=21.45)
-c_cat_c  = st.sidebar.number_input("Cathode Catalyst Cost ($/g)",value=60.0)
-j0_c     = st.sidebar.number_input("Cathode j0 (A/cm²_active)", value=1e-3)
-a_c      = st.sidebar.number_input("Cathode Tafel a (V)",value=0.08)
-b_c      = st.sidebar.number_input("Cathode Tafel b (V)",value=0.04)
+# # Catalyst cathode
+# rho_cat_c= st.sidebar.number_input("Cathode Catalyst Density (g/cm³)", value=21.45)
+# c_cat_c  = st.sidebar.number_input("Cathode Catalyst Cost ($/g)",value=60.0)
+# j0_c     = st.sidebar.number_input("Cathode j0 (A/cm²_active)", value=1e-3)
+# a_c      = st.sidebar.number_input("Cathode Tafel a (V)",value=0.08)
+# b_c      = st.sidebar.number_input("Cathode Tafel b (V)",value=0.04)
+
+st.sidebar.header("Anode Catalyst Selection")
+anode_catalyst = st.sidebar.selectbox("Anode Catalyst", ["IrO2", "RuO2", "Custom"])
+if anode_catalyst == "IrO2":
+    rho_cat_a = 11.66 #Cathode Catalyst Density (g/cm³)"
+    c_cat_a = 100.0 #Anode Catalyst Cost ($/g)
+    j0_a = 1e-2 #Cathode j0 (A/cm²_active)
+    S_cat_a = 100000.0
+    
+    a_a      = 0.1
+    b_a      = 0.05
+elif anode_catalyst == "RuO2":
+    rho_cat_a = 6.97 #Cathode Catalyst Density (g/cm³)"
+    c_cat_a = 80.0 #Anode Catalyst Cost ($/g)
+    j0_a = 1e-2 #Cathode j0 (A/cm²_active)
+    
+    S_cat_a = 100000.0
+    a_a      =0.1
+    b_a      =0.05
+else:
+    rho_cat_a = st.sidebar.number_input("Anode Catalyst Density (g/cm³)", value=10.0)
+    c_cat_a = st.sidebar.number_input("Anode Catalyst Cost ($/g)", value=50.0)
+    j0_a = st.sidebar.number_input("Anode Exchange Current Density (A/cm²_active)", value=1e-2)
+    
+    S_cat_a = st.sidebar.number_input("Anode Specific Surface Area (cm²_active/g)", value=100000.0)
+    a_a      = st.sidebar.number_input("Anode Tafel a (V)",value=0.1)
+    b_a      = st.sidebar.number_input("Anode Tafel b (V)",value=0.05)
+
+st.sidebar.header("Cathode Catalyst Selection")
+cathode_catalyst = st.sidebar.selectbox("Cathode Catalyst", ["Pt", "Pt-Ru", "Custom"])
+if cathode_catalyst == "Pt":
+    rho_cat_c = 21.45 #Cathode Catalyst Density (g/cm³)"
+    c_cat_c = 60.0 #Anode Catalyst Cost ($/g)
+    j0_c = 1e-2 # "Cathode j0 (A/cm²_active
+    S_cat_c = 100000.0
+    
+    a_c      = 0.08
+    b_c      = 0.04
+elif cathode_catalyst == "Pt-Ru":
+    rho_cat_c = 16.0 #Cathode Catalyst Density (g/cm³)"
+    c_cat_c = 55.0 # Anode Catalyst Cost ($/g)
+    j0_c = 1e-2 # "Cathode j0 (A/cm²_active
+    S_cat_c = 100000.0
+    
+    a_c      = 0.08
+    b_c      = 0.04
+else:
+    rho_cat_c = st.sidebar.number_input("Cathode Catalyst Density (g/cm³)", value=21.45)
+    c_cat_c = st.sidebar.number_input("Cathode Catalyst Cost ($/g)", value=60.0)
+    j0_c = st.sidebar.number_input("Cathode Exchange Current Density (A/cm²_active)", value=1e-2)
+    S_cat_c = st.sidebar.number_input("Cathode Specific Surface Area (cm²active/g)", value=100000.0)
+    a_c      = st.sidebar.number_input("Cathode Tafel a (V)",value=0.08)
+    b_c      = st.sidebar.number_input("Cathode Tafel b (V)",value=0.04)
+
+
+with st.sidebar.expander("More Customizations"):
+    alpha  = st.number_input("Charge Transfer Coeff alpha",value=0.5) #0.5 to 1, For the anode (oxidation reaction), the charge transfer coefficient is often around 2, while for the cathode (reduction reaction), it is approximately 0.51
+
+    C_bulk_a = st.number_input("Anode Bulk Conc (mol/cm³)", format="%.4f", value=0.056) #Concentration ≈ rho/molar mass = (1 g/cm³) / (18 g/mol) ≈ **0.056 mol/cm³** (or 56 mol/L)
+    D_a = st.number_input("Anode Diffusivity (cm²/s)", format="%.4f", value=0.26) #Bulk Diffusivity of Water Vapor (D): 0.26 cm²/s at 80°C and 1 atm. ld value 1e-2
+    tau_a = st.number_input("Anode Tortuosity", value=1.2) #  1.27 to 2.13
+
+    C_bulk_c = st.number_input("Cathode Bulk Conc (mol/cm³)", format="%.4f", value=0.001) #**0.001-0.002 mol/cm³** # formally 0.01
+    D_c = st.number_input("Cathode Diffusivity (cm²/s)", format="%.6f", value=2e-5) #For water at room temperature, it's around 2×10−5cm2​/s #old =1e-2
+    tau_c = st.number_input("Cathode Tortuosity", value=1.27) #  1.27 to 2.13
+
+
 
 ###############################################################################
 # 21-Constraint Bounds
 ###############################################################################
+st.sidebar.write("-----")
 st.sidebar.header("21 Constraints Bounds")
 
+eta_max= st.sidebar.number_input("Max Overpotential (V)", value=2.0)
 # Anode
+st.sidebar.header("Anode Layer Constraints")
 eps_a_min, eps_a_max= st.sidebar.slider("Anode Porosity Range", 0.001,0.999,(0.001,0.999))
 delta_a_min,delta_a_max= st.sidebar.slider("Anode Thickness δ_a",1e-4,0.05,(1e-4,0.01))
 Scat_a_min,Scat_a_max= st.sidebar.slider("Anode S_cat Range",1e2,1e6,(1e3,1e5))
@@ -127,6 +205,7 @@ L_a_min,L_a_max= st.sidebar.slider("Anode Catalyst Loading range",0.0,0.05,(0.00
 SA_a_min= st.sidebar.number_input("Anode Effective Surface Min (cm²)",value=100.0)
 
 # Cathode
+st.sidebar.header("Cathode Layer Constraints")
 eps_c_min, eps_c_max= st.sidebar.slider("Cathode Porosity Range",0.001,0.999,(0.001,0.999))
 delta_c_min,delta_c_max= st.sidebar.slider("Cathode Thickness δ_c",1e-4,0.05,(1e-4,0.01))
 Scat_c_min,Scat_c_max= st.sidebar.slider("Cathode S_cat Range",1e2,1e6,(1e3,1e5))
@@ -139,6 +218,7 @@ j_min, j_max= st.sidebar.slider("Operating j range",0.0,1.0,(0.0,0.1))
 ###############################################################################
 # Pareto-based settings
 ###############################################################################
+st.sidebar.write("-----")
 st.sidebar.header("Algorithm Settings (Pareto-based only)")
 pop_size=st.sidebar.number_input("Population Size",value=40,min_value=10)
 n_gen=   st.sidebar.number_input("Number of Gens",value=30,min_value=10)

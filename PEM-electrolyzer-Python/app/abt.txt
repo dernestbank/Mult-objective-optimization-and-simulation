@@ -1,0 +1,37 @@
+
+PEM electrolyzers work by splitting water into hydrogen and oxygen using electricity. The water reacts at the anode to create oxygen and positively charged hydrogen ions, which then move across the PEM to the cathode. 
+
+PEM electrolyzers have several advantages, including:
+- Compact design: PEM electrolyzers are more compact than alkaline electrolyzers. 
+- High current density: PEM electrolyzers can operate at high current densities. 
+- Fast response: PEM electrolyzers can be started, stopped, and ramped up and down quickly. 
+- Pure hydrogen: PEM electrolyzers can produce hydrogen that is 99.99% pure. 
+
+However, PEM electrolyzers are more expensive than alkaline electrolyzers because they require expensive materials like platinum and iridium. 
+
+
+
+
+A proton exchange membrane (PEM) is a semipermeable membrane that allows protons to pass through while blocking electrons. PEMs are used in fuel cells, electrolyzers, and other electrochemical devices. 
+How PEMs work 
+PEMs are made from polymers with sulfonated or carboxylated groups.
+Protons move along the polymer backbone.
+PEMs act as an electronic insulator and reactant barrier.
+PEMs separate reactants and transport protons.
+PEMs force electrons to travel through an external circuit, creating an electric current.
+Uses of PEMs
+Fuel cells: PEM fuel cells generate electricity by reacting hydrogen and oxygen. They are being developed for transportation, stationary, and portable applications. 
+Electrolyzers: PEM electrolyzers consume electricity. General Electric first introduced PEM electrolysis in the 1960s. 
+Effluent treatment: PEMs can be used in effluent treatment. 
+Recycling: PEMs can be used in recycling. 
+Energy conversion: PEMs can be used in energy conversion. 
+Storage devices: PEMs can be used in storage devices like redox flow batteries. 
+
+
+
+RUI shi lab S2D2 lab | PSU
+https://s2d2lab.notion.site/THE-S2D2-LAB-PSU-b90a0c2efb834588af281424e5ff5e53 
+Sustainable Design, Systems, and Decision-making (S2D2) Group in the Department of Chemical Engineering at Penn State! 
+The Sustainable Design, Systems, and Decision-making (S2D2) Lab at the Pennsylvania State University focuses on leveraging tools and technologies for sustainability transformation, particularly in the areas of sustainable design and optimization, industrial biotech, food-energy-water systems, plastics recycling, and waste valorization.
+ Our approach navigates decision-making by linking engineering metrics with sustainability analyses including life cycle assessment (LCA; for environmental impacts) and techno-economic analysis (TEA; for financial viability) under uncertainty.
+  
