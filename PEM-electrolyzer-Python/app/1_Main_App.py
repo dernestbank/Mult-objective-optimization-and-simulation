@@ -11,7 +11,7 @@ from datetime import datetime
 from utils.optimization import run_optimization
 
 st.set_page_config(page_title="PEM Electrolyzer Optimization", layout="wide")
-
+st.write("powered by S2D2 Lab | Penn State")
 st.title("PEM Electrolyzer Design playground: Catalyst layer Design Optimization")
 st.write("Optimization of Electrolyzer Design for PEM Electrolyzer using 21-Constraint Model")
 
@@ -92,7 +92,7 @@ A_cell = st.sidebar.number_input("Cell Active Area (cm²)", value=50.0)
 j      = st.sidebar.number_input("Current Density j (A/cm²)", value=2.0)
 R      = 8.314 # J/(mol*K)
 T      = st.sidebar.number_input("Temperature (K) ", value=353.0)
-st.sidebar.write(f"Temp = {T-273.15:.2f} °C")
+st.sidebar.write(f" {T-273.15:.2f} °C")
 # n_e    = st.sidebar.number_input("Number of Electrons (n)", value=2)
 n_e=int(2)
 F_const= 96485.0 # Faraday Constant
@@ -127,17 +127,17 @@ anode_catalyst = st.sidebar.selectbox("Anode Catalyst", ["IrO2", "RuO2", "Custom
 if anode_catalyst == "IrO2":
     rho_cat_a = 11.66 #Cathode Catalyst Density (g/cm³)"
     c_cat_a = 100.0 #Anode Catalyst Cost ($/g)
-    j0_a = 1e-2 #Cathode j0 (A/cm²_active)
-    S_cat_a = 100000.0
+    j0_a = 1e-2 #Cathode exchange current densit j0 (A/cm²_active) **0.1 to 10 mA/cm²**
+    # S_cat_a = 100000.0
     
     a_a      = 0.1
     b_a      = 0.05
 elif anode_catalyst == "RuO2":
-    rho_cat_a = 6.97 #Cathode Catalyst Density (g/cm³)"
+    rho_cat_a = 6.97 #Cathode Catalyst Density (g/cm³)" 
     c_cat_a = 80.0 #Anode Catalyst Cost ($/g)
     j0_a = 1e-2 #Cathode j0 (A/cm²_active)
     
-    S_cat_a = 100000.0
+    # S_cat_a = 100000.0
     a_a      =0.1
     b_a      =0.05
 else:
@@ -153,16 +153,16 @@ st.sidebar.header("Cathode Catalyst Selection")
 cathode_catalyst = st.sidebar.selectbox("Cathode Catalyst", ["Pt", "Pt-Ru", "Custom"])
 if cathode_catalyst == "Pt":
     rho_cat_c = 21.45 #Cathode Catalyst Density (g/cm³)"
-    c_cat_c = 60.0 #Anode Catalyst Cost ($/g)
-    j0_c = 1e-2 # "Cathode j0 (A/cm²_active
-    S_cat_c = 100000.0
+    c_cat_c = 60.0 #Anode Catalyst Cost ($/g) **$27.30 to $59.00 per gram**
+    j0_c = 1e-2 # "Cathode j0 (A/cm²_active 
+    # S_cat_c = 100000.0
     
     a_c      = 0.08
     b_c      = 0.04
 elif cathode_catalyst == "Pt-Ru":
-    rho_cat_c = 16.0 #Cathode Catalyst Density (g/cm³)"
+    rho_cat_c = 16.0 #Cathode Catalyst Density (g/cm³)" #10 to 15 g/cm³
     c_cat_c = 55.0 # Anode Catalyst Cost ($/g)
-    j0_c = 1e-2 # "Cathode j0 (A/cm²_active
+    j0_c = 1e-2 # "Cathode j0 (A/cm²_active **0.1 to 450 mA/cm²**
     S_cat_c = 100000.0
     
     a_c      = 0.08
@@ -194,26 +194,32 @@ with st.sidebar.expander("More Customizations"):
 ###############################################################################
 st.sidebar.write("-----")
 st.sidebar.header("21 Constraints Bounds")
-
+# Global
 eta_max= st.sidebar.number_input("Max Overpotential (V)", value=2.0)
+j_min, j_max= st.sidebar.slider("Operating current density j range",0.0,9.0,(0.1,6.0),format="%.2f")
+
 # Anode
 st.sidebar.header("Anode Layer Constraints")
-eps_a_min, eps_a_max= st.sidebar.slider("Anode Porosity Range", 0.001,0.999,(0.001,0.999))
-delta_a_min,delta_a_max= st.sidebar.slider("Anode Thickness δ_a",1e-4,0.05,(1e-4,0.01))
-Scat_a_min,Scat_a_max= st.sidebar.slider("Anode S_cat Range",1e2,1e6,(1e3,1e5))
-L_a_min,L_a_max= st.sidebar.slider("Anode Catalyst Loading range",0.0,0.05,(0.001,0.02))
-SA_a_min= st.sidebar.number_input("Anode Effective Surface Min (cm²)",value=100.0)
-
+eps_a_min, eps_a_max= st.sidebar.slider("Anode Porosity Range, %", 0.001,0.999,(0.301,0.600),format="%.3f")#35-50%
+delta_a_min,delta_a_max= st.sidebar.slider("Anode Thickness, μm",1,100,(1,30), format="%.2f") #4-10 μm
+# Convert delta from microns to centimeters
+delta_a_min_cm, delta_a_max_cm = delta_a_min * 1e-4, delta_a_max * 1e-4
+Scat_a_min,Scat_a_max= st.sidebar.slider("Anode S_cat Range (m²/g)",10,1000,(100,300),format="%.3f")   # 200-800 m²/g 100 - 300 m²/g <sub>Ir</sub>
+Scat_a_min,Scat_a_max=Scat_a_min * 1e4, Scat_a_max* 1e4     #m2/g to cm2/g      
+L_a_min,L_a_max= st.sidebar.slider("Anode Catalyst Loading range, (g/cm^2)",0.0,0.05,(0.001,0.02),format="%.3f")
+SA_a_min= st.sidebar.number_input("Anode Effective Surface Min (m²/g)",value=5.0,) #15-80 m²/g
+SA_a_min =SA_a_min * 1e4#(m²/g) to (cm²/g)
 # Cathode
 st.sidebar.header("Cathode Layer Constraints")
-eps_c_min, eps_c_max= st.sidebar.slider("Cathode Porosity Range",0.001,0.999,(0.001,0.999))
-delta_c_min,delta_c_max= st.sidebar.slider("Cathode Thickness δ_c",1e-4,0.05,(1e-4,0.01))
-Scat_c_min,Scat_c_max= st.sidebar.slider("Cathode S_cat Range",1e2,1e6,(1e3,1e5))
-L_c_min,L_c_max= st.sidebar.slider("Cathode Catalyst Loading range",0.0,0.05,(0.001,0.02))
-SA_c_min= st.sidebar.number_input("Cathode Effective Surface Min (cm²)",value=100.0)
+eps_c_min, eps_c_max= st.sidebar.slider("Cathode Porosity Range %",0.001,0.999,(0.300,0.700),format="%.3f")
+delta_c_min,delta_c_max= st.sidebar.slider("Cathode Thickness μm",1,100,(1,30),format="%.2f")#4-10 μm
+delta_c_min,delta_c_max= delta_c_min * 1e-4, delta_c_max* 1e-4
+Scat_c_min,Scat_c_max= st.sidebar.slider("Cathode S_cat Range",10,1000,(50,200),format="%.3f") #- Cathode: 50 - 200 m²/g Pt
+Scat_a_min,Scat_a_max=Scat_a_min * 1e4, Scat_a_max* 1e4    #m2/g to cm2/g
+L_c_min,L_c_max= st.sidebar.slider("Cathode Catalyst Loading range, (g/cm^2)",0.0,0.05,(0.001,0.02),format="%.3f")
+SA_c_min= st.sidebar.number_input("Cathode Effective Surface Min (cm²)",value=10.0) #15-80 m²/g
+SA_c_min =SA_c_min * 1e4   
 
-# Global
-j_min, j_max= st.sidebar.slider("Operating j range",0.0,1.0,(0.0,0.1))
 
 ###############################################################################
 # Pareto-based settings
