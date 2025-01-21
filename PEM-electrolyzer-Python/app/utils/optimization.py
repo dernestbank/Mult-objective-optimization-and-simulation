@@ -146,15 +146,19 @@ class PEMProblem(ElementwiseProblem):
         eta_a = eta_total(
             j=self.j, j0=self.j0_a, S_cat=Scat_a, epsilon=eps_a, delta=delta_a,
             a=self.a_a, b=self.b_a, R=self.R, T=self.T,
-            n=self.n, F=self.F, C_bulk=self.C_bulk_a, D=self.D_a, tau=self.tau_a
+            n=self.n, F=self.F, C_bulk=self.C_bulk_a, D=self.D_a, tau=self.tau_a,rho_cat=self.rho_cat_a
         )
         # cathode
         eta_c = eta_total(
             j=self.j, j0=self.j0_c, S_cat=Scat_c, epsilon=eps_c, delta=delta_c,
             a=self.a_c, b=self.b_c, R=self.R, T=self.T,
-            n=self.n, F=self.F, C_bulk=self.C_bulk_c, D=self.D_c, tau=self.tau_c
+            n=self.n, F=self.F, C_bulk=self.C_bulk_c, D=self.D_c, tau=self.tau_c ,rho_cat=self.rho_cat_c
         )
         eta_sum = eta_a + eta_c
+        
+        #troubleshoting and fixing infeasible solutions
+        
+        
 
         # 2 objectives
         out["F"] = [cost_total, eta_sum]
@@ -228,6 +232,19 @@ class PEMProblem(ElementwiseProblem):
               g_Lc_min, g_Lc_max]
         # Global(3):
         G += [g_j_min, g_j_max, g_eta]
+        
+         # 8) Hard constraint j <= j_lim
+    #    j_lim for anode => j_lim_a = (nF * (eps_a/tau_a)*D_a*C_bulk_a)/delta_a
+    #    j_lim for cathode => j_lim_c = ...
+        j_lim_a = (self.n*self.F*(eps_a/self.tau_a)*self.D_a*self.C_bulk_a)/(delta_a+1e-15)
+        j_lim_c = (self.n*self.F*(eps_c/self.tau_c)*self.D_c*self.C_bulk_c)/(delta_c+1e-15)
+        j_lim_global = min(j_lim_a, j_lim_c)
+
+        # => j <= j_lim_global => j - j_lim_global <= 0
+        g_jlim = self.j - j_lim_global
+
+    # Add it to G
+        G.append(g_jlim)
 
         out["G"] = G
 
