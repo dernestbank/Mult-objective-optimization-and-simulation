@@ -26,8 +26,12 @@ with col2:
         #  caption="Basic schema of a PEM electrolyzer. Source: Biologic",width=300, use_container_width=0.7 )  
 
 with col3:
-    st.button("Catalyst Layer Design", on_click=lambda: st.query_params(app="1_Main_App"))
-    st.button("Membrane Design", on_click=lambda: st.query_params(app="1_Main_App"))
+    if st.button("Catalyst Layer Design"):
+        st.switch_page("pages/1_Catalyst_layer.py")#1_Main_App.py
+    if st.button("Membrane Design"):
+        st.switch_page("pages/2_Membrane_layer.py")
+
+
     
 # --- INTRODUCTION ---
 st.header("Introduction")
