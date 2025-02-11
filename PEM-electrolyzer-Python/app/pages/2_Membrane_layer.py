@@ -6,11 +6,13 @@ from utils.membrane_optimization import run_optimization
 
 st.title("PEM Electrolyzer Membrane Design Optimization")
 
-st.sidebar.header("User Input Parameters")
+st.sidebar.header("Optimization Settings")
 
-# Select optimization algorithm (for now, only NSGA2 is implemented)
-algorithm_option = st.sidebar.selectbox("Choose Optimization Algorithm", options=["NSGA2"])
+# Choose optimization method
+method_options = ["NSGA2", "MOEAD", "SPEA2", "WeightedSum", "GoalSeeking"]
+method_choice = st.sidebar.selectbox("Select Optimization Method", options=method_options)
 
+# Set population size and number of generations
 pop_size = st.sidebar.slider("Population Size", min_value=50, max_value=300, value=100, step=10)
 n_gen = st.sidebar.slider("Number of Generations", min_value=10, max_value=200, value=100, step=10)
 seed = st.sidebar.number_input("Random Seed", value=1, step=1)
@@ -21,46 +23,93 @@ t_ub = st.sidebar.number_input("Upper bound for membrane thickness (m)", value=3
 j_lb = st.sidebar.number_input("Lower bound for current density (A/cm²)", value=0.5)
 j_ub = st.sidebar.number_input("Upper bound for current density (A/cm²)", value=3.0)
 
-st.sidebar.header("Constraint Adjustments")
-# For demonstration, display the mechanical minimum thickness (this is computed in model.py)
-# In a more advanced version, you might let the user adjust ΔP, r, SF, etc.
-st.write("Mechanical durability constraint (membrane thickness must be ≥ 158 µm).")
+bounds = {
+    't_lb': t_lb,
+    't_ub': t_ub,
+    'j_lb': j_lb,
+    'j_ub': j_ub
+}
+
+st.sidebar.header("Mechanical Durability Constraint")
+# Display (but not change) the default minimum thickness from mechanical considerations.
+default_t_mech_min = 158e-6
+st.sidebar.write(f"Mechanical durability constraint: t ≥ {default_t_mech_min:.2e} m")
+
+st.sidebar.header("Scalarization Parameters")
+scalar_params = {}
+if method_choice in ["WeightedSum", "GoalSeeking"]:
+    if method_choice == "WeightedSum":
+        weights_input = st.sidebar.text_input("Enter weights (comma separated for f1,f2,f3,f4)", "0.25, 0.25, 0.25, 0.25")
+        try:
+            weights = [float(w.strip()) for w in weights_input.split(",")]
+        except:
+            weights = [0.25, 0.25, 0.25, 0.25]
+        scalar_params["weights"] = weights
+    elif method_choice == "GoalSeeking":
+        goals_input = st.sidebar.text_input("Enter goals (comma separated for f1,f2,f3,f4)", "-0.1, -15000, 15, 3")
+        try:
+            goals = [float(g.strip()) for g in goals_input.split(",")]
+        except:
+            goals = [-0.1, -15000, 15, 3]
+        scalar_params["goals"] = goals
+
+st.sidebar.header("Membrane Model Parameters")
+# Allow user to adjust some key membrane parameters
+c_ionomer = st.sidebar.number_input("Cost of ionomer ($/kg)", value=300.0)
+rho = st.sidebar.number_input("Density of membrane (kg/m³)", value=2000.0)
+c_manuf = st.sidebar.number_input("Manufacturing cost ($/m²)", value=20.0)
+c_E = st.sidebar.number_input("Environmental impact factor (kg CO₂-eq/kg)", value=10.0)
+
+model_params = {
+    "c_ionomer": c_ionomer,
+    "rho": rho,
+    "c_manuf": c_manuf,
+    "c_E": c_E,
+    "t_mech_min": default_t_mech_min
+}
 
 if st.button("Run Optimization"):
-    st.write("Running optimization...")
-    # Note: Our current optimization problem (in optimization.py) uses fixed bounds.
-    # In a full implementation, these bounds would be passed dynamically.
-    res = run_optimization(algorithm_name=algorithm_option, seed=seed, pop_size=pop_size, n_gen=n_gen)
+    st.write("Running optimization, please wait...")
+    res = run_optimization(method=method_choice,
+                           model_params=model_params,
+                           bounds=bounds,
+                           scalar_params=scalar_params,
+                           pop_size=pop_size,
+                           n_gen=n_gen,
+                           seed=seed)
     st.write("Optimization Completed!")
     
-    # Retrieve objective function values
+    # Retrieve objective values from the result
     F = res.F
-    # Since f1 and f2 were defined as negatives to enable maximization, we plot:
-    efficiency = -F[:, 0]
-    lifetime = -F[:, 1]
-    cost = F[:, 2]
-    env_impact = F[:, 3]
-    
-    st.subheader("Pareto Front: Efficiency vs. Cost")
-    fig, ax = plt.subplots()
-    sc = ax.scatter(cost, efficiency, c=lifetime, cmap="viridis")
-    ax.set_xlabel("Capital Cost ($/m²)")
-    ax.set_ylabel("Energy Efficiency")
-    cbar = plt.colorbar(sc, ax=ax)
-    cbar.set_label("Lifetime (hours)")
-    st.pyplot(fig)
+    X = res.X
     
     st.subheader("Optimization Result (Decision Variables)")
-    st.write("Membrane thickness (m) and current density (A/cm²):")
-    st.write(res.X)
+    st.write("Each row corresponds to [membrane thickness (m), current density (A/cm²)]:")
+    st.write(X)
     
-    st.subheader("Objective Values")
-    st.write("Columns: [-Efficiency, -Lifetime, Capital Cost, Environmental Impact]")
-    st.write(F)
-    
-    st.subheader("Pareto Front: Lifetime vs. Environmental Impact")
-    fig2, ax2 = plt.subplots()
-    ax2.scatter(lifetime, env_impact, c=cost, cmap="plasma")
-    ax2.set_xlabel("Lifetime (hours)")
-    ax2.set_ylabel("Environmental Impact (kg CO₂-eq/m²)")
-    st.pyplot(fig2)
+    if method_choice in ["NSGA2", "MOEAD", "SPEA2"]:
+        st.subheader("Pareto Front (Objective Values)")
+        st.write("Columns: [-Efficiency, -Lifetime, Capital Cost, Environmental Impact]")
+        st.write(F)
+        
+        # Plot two selected objective pairs. Here we plot Efficiency vs. Cost.
+        efficiency = -F[:, 0]  # since we minimized negative efficiency
+        cost = F[:, 2]
+        
+        fig, ax = plt.subplots()
+        sc = ax.scatter(cost, efficiency, c=-F[:, 1], cmap="viridis")  # color by lifetime (maximizing lifetime)
+        ax.set_xlabel("Capital Cost ($/m²)")
+        ax.set_ylabel("Energy Efficiency")
+        cbar = plt.colorbar(sc, ax=ax)
+        cbar.set_label("Lifetime (hours)")
+        st.pyplot(fig)
+    else:
+        st.subheader("Scalarized Objective Value")
+        st.write("The scalar objective (weighted sum or goal-seeking) is shown for each solution:")
+        st.write(F)
+        
+        # For scalar problems, we can show the best solution
+        best_idx = np.argmin(F)
+        st.write("Best solution:")
+        st.write(f"Decision vector: {X[best_idx, :]}")
+        st.write(f"Objective value: {F[best_idx, 0]}")
