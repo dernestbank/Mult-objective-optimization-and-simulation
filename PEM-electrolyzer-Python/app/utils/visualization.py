@@ -58,3 +58,65 @@ def glyph_plot(df, x, y, size_col=None, color_col=None):
     fig = px.scatter(df, x=x, y=y, size=size_col, color=color_col, 
                      title="Glyph Plot", hover_data=df.columns)
     return fig
+
+
+
+
+# appended these functions to visualize design space
+
+import numpy as np
+import pandas as pd
+import plotly.express as px
+
+def create_full_dataframe(problem, X, F):
+    """
+    Given a problem instance and arrays X (decision variables) and F (objectives)
+    (both from an optimization run), evaluate the constraints for each solution
+    and return a DataFrame that includes decision variables, objectives, and constraints.
+    
+    Parameters:
+      - problem: an instance of PEMProblem (or your problem class)
+      - X: 2D array of decision variable values (num_solutions x num_vars)
+      - F: 2D array of objective values (num_solutions x num_objs)
+    
+    Returns:
+      A pandas DataFrame with columns for decision variables, objectives, and constraint violations.
+    """
+    # Evaluate constraints for each solution
+    G_list = []
+    for x in X:
+        out = {}
+        # Evaluate the problem at x; _evaluate expects x and writes to out["G"]
+        problem._evaluate(x, out)
+        G_list.append(out["G"])
+    G_array = np.array(G_list)
+    
+    # Define names for columns
+    var_names = ["delta_a", "eps_a", "S_cat_a", "delta_c", "eps_c", "S_cat_c"]
+    obj_names = ["Cost", "Overpotential"]
+    # Use generic names for constraint columns: G1, G2, ...
+    cons_names = [f"G{i+1}" for i in range(G_array.shape[1])]
+    
+    df_vars = pd.DataFrame(X, columns=var_names)
+    df_objs = pd.DataFrame(F, columns=obj_names)
+    df_cons = pd.DataFrame(G_array, columns=cons_names)
+    
+    return pd.concat([df_vars, df_objs, df_cons], axis=1)
+
+def design_space_scatter_matrix(df, dimensions=None, color=None):
+    """
+    Create a scatter matrix plot of the given DataFrame.
+    """
+    if dimensions is None:
+        dimensions = df.columns
+    fig = px.scatter_matrix(df, dimensions=dimensions, color=color)
+    return fig
+
+def design_space_parallel_coordinates(df, dimensions=None, color=None):
+    """
+    Create a parallel coordinates plot of the given DataFrame.
+    """
+    if dimensions is None:
+        dimensions = df.columns
+    fig = px.parallel_coordinates(df, dimensions=dimensions, color=color)
+    return fig
