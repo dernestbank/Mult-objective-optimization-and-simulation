@@ -1,4 +1,4 @@
-# 1_Main_App.py
+# pages/1_Catalyst_layer.py
 
 import os
 import json
@@ -13,8 +13,13 @@ from utils.optimization import run_optimization
 st.set_page_config(page_title="PEM Electrolyzer Optimization", layout="wide")
 st.write("powered by S2D2 Lab | Penn State")
 st.title("PEM Electrolyzer Design playground: Catalyst layer Design Optimization")
-st.write("Optimization of Electrolyzer Design for PEM Electrolyzer using 21-Constraint Model")
-
+# st.write("Optimization of Electrolyzer Design for PEM Electrolyzer using 21-Constraint Model")
+st.write("""
+Welcome to the PEM Electrolyzer Design Playground.  
+This tool allows you to explore optimization of the catalyst layer design using a 21-constraint (or 22 with j_lim) multiobjective model.  
+Select from scalarization methods (Weighted Sum, Goal Seeking) or Pareto-based methods (NSGA2, MOEA/D, SPEA2) in the navigation.
+""")
+st.write("---")
 # Add a button to clear the cache
 if st.sidebar.button("Clear Cache"):
     st.cache_data.clear()
@@ -422,3 +427,40 @@ if st.session_state["results_data"] is not None:
     st.sidebar.markdown("---")
     st.sidebar.write("### Loaded Results Data")
     st.sidebar.json(st.session_state["results_data"])
+
+
+
+#----------------
+from utils.visualization import  create_full_dataframe, design_space_scatter_matrix, design_space_parallel_coordinates, compute_hypervolume, compute_c_metric, compute_euclidean_distance
+from utils.optimization import PEMProblem
+# After your optimization run is complete and you have "res"
+if res.X is not None and res.F is not None:
+    st.success("Optimization complete!")
+    # Display best solution or Pareto front as you already do...
+    
+    # --- Now, re-create the problem instance for visualization.
+    # You can re-use the same run_kwargs that were used for the optimization.
+    # For demonstration, we assume run_kwargs is available or you can reassemble it.
+    problem_vis = PEMProblem(**run_kwargs)  # Make sure run_kwargs contains the same keys used by PEMProblem.
+    
+    # Create a full DataFrame that includes constraint values.
+    df_full = create_full_dataframe(problem_vis, res.X, res.F)
+    
+    st.subheader("Full Design Space (Decision Variables, Objectives, Constraints)")
+    st.dataframe(df_full)
+    
+    # Create a scatter matrix (you can choose which columns to include)
+    dims = ["Cost", "Overpotential"] + [col for col in df_full.columns if col.startswith("G")]
+    fig_scatter = design_space_scatter_matrix(df_full, dimensions=dims, color="Cost")
+    st.subheader("Scatter Matrix Plot")
+    st.plotly_chart(fig_scatter, use_container_width=True)
+    
+    # Create a parallel coordinates plot
+    fig_parallel = design_space_parallel_coordinates(df_full, dimensions=dims, color="Cost")
+    st.subheader("Parallel Coordinates Plot")
+    st.plotly_chart(fig_parallel, use_container_width=True)
+
+
+#--------------
+# st.write("---")
+# st.markdown("<footer><p style='text-align: right;'> 2025 S2D2 Lab | Penn State</p></footer>", unsafe_allow_html=True)

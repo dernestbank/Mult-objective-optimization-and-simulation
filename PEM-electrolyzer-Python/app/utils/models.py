@@ -107,6 +107,7 @@ def eta_total(
     
     val = j/(j0_geo)
     if val <= 0:
+        print(' -----val <= 0, val:{val} ')
         return 1e6  # Large penalty if infeasible
     else:
         eta_act = (R * T / (alpha * n * F)) * np.log(val)
@@ -116,17 +117,20 @@ def eta_total(
 
 
     # 2) Concentration Overpotential
+    eta_conc = 1e6  # default penalty
     # j_lim = nF * (epsilon/tau*D) * C_bulk / delta
     D_eff = (epsilon/tau)*D # effective diffusivity (cm^2/s)
     # limiting current density (A/cm^2)
     j_lim = (n*F*D_eff*C_bulk)/delta
+    # j_lim = 6 #A/cm2
 
      # check validity to avoid log(0)
     if j_lim <= j or j_lim<=0:
-        eta_conc = 1e6 # large penalty or infeasible
-        print(f'infeasible solution, j_lim <= j or j_lim <= 0 @ j_lim:{j_lim}, j:{j} ')
+        pass
+        # eta_conc = 1e6 # large penalty or infeasible
+        # print(f'infeasible solution, j_lim <= j or j_lim <= 0 @ j_lim:{j_lim}, j:{j} ')
         #print all parameters in terminal
-        print(f'epsilon:{epsilon}, tau:{tau}, delta:{delta}, D_eff:{D_eff}, C_bulk:{C_bulk}')
+        # print(f'epsilon:{epsilon}, tau:{tau}, delta:{delta}, D_eff:{D_eff}, C_bulk:{C_bulk}')
     else:
         fac = (R*T)/(n*F)
         # (R*T/(nF)) ln(1 - j / j_lim)
