@@ -75,54 +75,54 @@ This playground focuses on optimizing the catalyst layer, a critical component i
 
 """)
 
-with st.expander("Learn more about the optimization parameters"):
-    st.write("""
-        The total overpotential (η_total) is the sum of the activation overpotential (η_act) and the concentration overpotential (η_conc):
+# with st.expander("Learn more about the optimization parameters"):
+#     st.write("""
+#         The total overpotential (η_total) is the sum of the activation overpotential (η_act) and the concentration overpotential (η_conc):
         
-        η_total  = η_act  + η_conc
+#         η_total  = η_act  + η_conc
         
-        1. **Catalyst Layer Thickness (δ):**
+#         1. **Catalyst Layer Thickness (δ):**
             
-        	Activation Overpotential (η_act ): Increasing δ generally decreases η_act. This is because a thicker layer provides more catalyst material and thus more active sites for the reaction. However, this effect diminishes beyond a certain thickness where mass transport limitations become dominant.
-        	Concentration Overpotential (η_conc): Increasing δ generally increases η_conc. This is because a thicker layer increases the diffusion path for reactants and products, making it harder for them to reach or leave the reaction sites.
-        	Net Effect: The optimal thickness represents a balance between minimizing activation losses (favored by thicker layers) and minimizing mass transport losses (favored by thinner layers).
+#         	Activation Overpotential (η_act ): Increasing δ generally decreases η_act. This is because a thicker layer provides more catalyst material and thus more active sites for the reaction. However, this effect diminishes beyond a certain thickness where mass transport limitations become dominant.
+#         	Concentration Overpotential (η_conc): Increasing δ generally increases η_conc. This is because a thicker layer increases the diffusion path for reactants and products, making it harder for them to reach or leave the reaction sites.
+#         	Net Effect: The optimal thickness represents a balance between minimizing activation losses (favored by thicker layers) and minimizing mass transport losses (favored by thinner layers).
         
-        2. **Porosity (ε):**
+#         2. **Porosity (ε):**
             
-        	Activation Overpotential ( η_act  ): Increasing ε generally increases η_act. Higher porosity means less catalyst material per unit volume, reducing the number of active sites.
-        	Concentration Overpotential (η_conc ): Increasing ε generally decreases η_conc. Higher porosity improves mass transport by providing more open pathways for reactants and products.
-        	Net Effect: The optimal porosity represents a balance between maximizing active sites (favored by lower porosity) and minimizing mass transport resistance (favored by higher porosity).
+#         	Activation Overpotential ( η_act  ): Increasing ε generally increases η_act. Higher porosity means less catalyst material per unit volume, reducing the number of active sites.
+#         	Concentration Overpotential (η_conc ): Increasing ε generally decreases η_conc. Higher porosity improves mass transport by providing more open pathways for reactants and products.
+#         	Net Effect: The optimal porosity represents a balance between maximizing active sites (favored by lower porosity) and minimizing mass transport resistance (favored by higher porosity).
         
-        3. **Specific Surface Area (Scat):**
+#         3. **Specific Surface Area (Scat):**
         
-        	Activation Overpotential (η_act): Increasing Scat directly and significantly decreases η_act. Higher specific surface area means more active sites per unit mass of catalyst, leading to a higher reaction rate and lower activation losses. 
-        	Concentration Overpotential (η_conc): Scat has a minor indirect effect on η_conc. It can influence the overall catalyst layer structure, which might slightly affect mass transport, but the primary effect of Scat is on the activation overpotential.
-        	Net Effect: Increasing Scat is almost always beneficial for performance, as it directly reduces activation losses with minimal negative impact on mass transport. However, there are practical limits to how high Scat can be achieved.
+#         	Activation Overpotential (η_act): Increasing Scat directly and significantly decreases η_act. Higher specific surface area means more active sites per unit mass of catalyst, leading to a higher reaction rate and lower activation losses. 
+#         	Concentration Overpotential (η_conc): Scat has a minor indirect effect on η_conc. It can influence the overall catalyst layer structure, which might slightly affect mass transport, but the primary effect of Scat is on the activation overpotential.
+#         	Net Effect: Increasing Scat is almost always beneficial for performance, as it directly reduces activation losses with minimal negative impact on mass transport. However, there are practical limits to how high Scat can be achieved.
         
-        **Surface Area Definitions:**
+#         **Surface Area Definitions:**
         
-        	Specific Surface Area (Scat): This is the surface area of the catalyst material per unit mass (typically m²/g). It's an intrinsic property of the catalyst material itself. For example, a catalyst with smaller nanoparticles will have a higher specific surface area than the same mass of catalyst with larger particles.   
+#         	Specific Surface Area (Scat): This is the surface area of the catalyst material per unit mass (typically m²/g). It's an intrinsic property of the catalyst material itself. For example, a catalyst with smaller nanoparticles will have a higher specific surface area than the same mass of catalyst with larger particles.   
         
-        	Effective Surface Area (SA_eff): This is the surface area of the catalyst that is actually available for the electrochemical reaction per unit geometric area of the electrode (typically cm²/cm³). It takes into account the porosity and thickness of the catalyst layer:
+#         	Effective Surface Area (SA_eff): This is the surface area of the catalyst that is actually available for the electrochemical reaction per unit geometric area of the electrode (typically cm²/cm³). It takes into account the porosity and thickness of the catalyst layer:
         
-        	SA_eff  = Scat * (1 - ε) * δ
+#         	SA_eff  = Scat * (1 - ε) * δ
         
-        	(1 - ε) represents the solid volume fraction of the catalyst layer.
-        	Multiplying by δ gives the effective surface area per unit geometric area of the electrode.
+#         	(1 - ε) represents the solid volume fraction of the catalyst layer.
+#         	Multiplying by δ gives the effective surface area per unit geometric area of the electrode.
         
-        	Geometric Surface Area (A_cell): This is the macroscopic area of the electrode (typically cm²). It's the area that you would measure with a ruler. It is used to calculate the current density:
+#         	Geometric Surface Area (A_cell): This is the macroscopic area of the electrode (typically cm²). It's the area that you would measure with a ruler. It is used to calculate the current density:
         
-        	j =I/A_cell   
+#         	j =I/A_cell   
         
-        Where I is the current.
+#         Where I is the current.
         
-        In summary:
+#         In summary:
         
-        	δ: Affects both activation and concentration overpotentials in opposing ways. Optimal δ balances these effects.
-        	ε: Affects both activation and concentration overpotentials in opposing ways. Optimal ε balances these effects.
-        	Scat: Primarily affects activation overpotential, with higher Scat leading to lower η_act .
-        """
-        )
+#         	δ: Affects both activation and concentration overpotentials in opposing ways. Optimal δ balances these effects.
+#         	ε: Affects both activation and concentration overpotentials in opposing ways. Optimal ε balances these effects.
+#         	Scat: Primarily affects activation overpotential, with higher Scat leading to lower η_act .
+#         """
+#         )
 st.write("\n \n \n ")
 st.write("---")
 # --- THE S2D2 LAB ---

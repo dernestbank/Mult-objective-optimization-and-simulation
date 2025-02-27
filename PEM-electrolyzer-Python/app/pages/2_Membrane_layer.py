@@ -52,7 +52,118 @@ if method_choice in ["WeightedSum", "GoalSeeking"]:
         except:
             goals = [-0.1, -15000, 15, 3]
         scalar_params["goals"] = goals
+###############################################################################
+# Place holder for LCA and Environmental Impact Assessment
+###############################################################################
 
+# Placeholder for LCA and Environmental Impact Assessment
+st.sidebar.header("Environmental Impact Assessment")
+st.sidebar.write("Placeholder: This section is under construction. Please check back later.")
+# LCA Scope Selection
+with st.sidebar.expander("LCA Scope & Boundaries"):
+    lca_scope = st.selectbox(
+        "Life Cycle Assessment Scope",
+        ["Cradle-to-Gate", "Cradle-to-Grave", "Cradle-to-Cradle", "Gate-to-Gate"]
+    )
+    
+    geographical_scope = st.selectbox(
+        "Geographical Scope",
+        ["Global", "Europe", "North America", "Asia", "Custom Region"]
+    )
+    
+    if geographical_scope == "Custom Region":
+        countries = st.multiselect(
+            "Select Countries",
+            ["USA", "Germany", "China", "Japan", "UK", "France", "South Korea", "Canada"]
+        )
+
+# Life Cycle Inventory
+with st.sidebar.expander("Life Cycle Inventory"):
+    inventory_db = st.selectbox(
+        "Inventory Database",
+        ["ecoinvent 3.8", "GaBi", "USLCI", "ELCD", "Custom"]
+    )
+    
+    impact_method = st.selectbox(
+        "Impact Assessment Method",
+        ["ReCiPe Midpoint (E)", "ReCiPe Endpoint (H)", "ILCD 2011", "TRACI 2.1"]
+    )
+
+# Impact Categories
+with st.sidebar.expander("Impact Categories"):
+    st.write("Select Impact Categories to Consider:")
+    
+    impact_weights = {}
+    
+    impact_weights['gwp'] = st.slider(
+        "Global Warming Potential (CO₂-eq)",
+        0.0, 1.0, 0.2, 0.1,
+        help="Climate change impact weight"
+    )
+    
+    impact_weights['marine'] = st.slider(
+        "Marine Ecotoxicity (1,4-DCB-eq)",
+        0.0, 1.0, 0.15, 0.1
+    )
+    
+    impact_weights['human_carc'] = st.slider(
+        "Human Carcinogenic (1,4-DCB-eq)",
+        0.0, 1.0, 0.15, 0.1
+    )
+    
+    impact_weights['human_noncarc'] = st.slider(
+        "Human Non-carcinogenic (1,4-DCB-eq)",
+        0.0, 1.0, 0.15, 0.1
+    )
+    
+    impact_weights['land_use'] = st.slider(
+        "Land Use (m² × year)",
+        0.0, 1.0, 0.15, 0.1
+    )
+    
+    impact_weights['fossil'] = st.slider(
+        "Fossil Resource Scarcity (kg oil-eq)",
+        0.0, 1.0, 0.2, 0.1
+    )
+
+# Environmental Constraints
+with st.sidebar.expander("Environmental Constraints"):
+    max_gwp = st.number_input(
+        "Maximum GWP (kg CO₂-eq/kg H₂)",
+        value=10.0,
+        help="Maximum allowed Global Warming Potential"
+    )
+    
+    max_energy = st.number_input(
+        "Maximum Energy Use (MJ/kg H₂)",
+        value=200.0
+    )
+    
+    water_consumption = st.number_input(
+        "Maximum Water Consumption (L/kg H₂)",
+        value=25.0
+    )
+model_params = {}
+# Add environmental parameters to model_params
+model_params.update({
+    "lca_scope": lca_scope,
+    "geographical_scope": geographical_scope,
+    "inventory_db": inventory_db,
+    "impact_method": impact_method,
+    "impact_weights": impact_weights,
+    "environmental_constraints": {
+        "max_gwp": max_gwp,
+        "max_energy": max_energy,
+        "water_consumption": water_consumption
+    }
+})
+
+
+
+
+###############################################################################
+# Membrane Model Parameters
+###############################################################################
 st.sidebar.header("Membrane Model Parameters")
 # Allow user to adjust some key membrane parameters
 c_ionomer = st.sidebar.number_input("Cost of ionomer ($/kg)", value=300.0)
@@ -113,3 +224,4 @@ if st.button("Run Optimization"):
         st.write("Best solution:")
         st.write(f"Decision vector: {X[best_idx, :]}")
         st.write(f"Objective value: {F[best_idx, 0]}")
+
